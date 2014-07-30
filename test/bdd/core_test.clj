@@ -61,3 +61,34 @@
     )
   )
 )
+
+
+(deftest test-all-where
+  (testing "all-where"
+    (with-new-bdd
+      (let [b (variable :b)
+            nc (not-variable :c)
+            x (@#'bdd.core/internal *bdd* :a nc b)]
+
+        (is (= (all-where true (t)) [{}]))
+        (is (= (all-where false (t)) []))
+
+        (is (= (all-where true (f)) []))
+        (is (= (all-where false (f)) [{}]))
+
+        (is (= (all-where true b) [{:b true}]))
+        (is (= (all-where false b) [{:b false}]))
+
+        (is (= (all-where true nc) [{:c false}]))
+        (is (= (all-where false nc) [{:c true}]))
+
+        ; The order is deterministic, since it's based on the variable ordering,
+        ; and the fact that we recurse into the low branch first.
+        (is (= (all-where true x) [{:a false :c false}
+                                   {:a true :b true}]))
+        (is (= (all-where false x) [{:a false :c true}
+                                    {:a true :b false}]))
+      )
+    )
+  )
+)

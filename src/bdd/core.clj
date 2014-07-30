@@ -99,3 +99,17 @@
 (defn not-variable
   ([v] (not-variable *bdd* v))
   ([bdd v] (internal bdd v (t bdd) (f bdd))))
+
+
+;;-----------------------------------------------------------------------------
+;; Using formulas
+
+(defn all-where
+  [value node]
+  (if (leaf-node? node)
+    (if (= value (.value node)) [{}] [])
+    (let [variable (.variable node)]
+      (lazy-cat (map #(assoc % variable false)
+                     (all-where value (.low node)))
+                (map #(assoc % variable true)
+                     (all-where value (.high node)))))))
