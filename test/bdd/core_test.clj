@@ -1,6 +1,7 @@
 (ns bdd.core-test
   (:require [clojure.test :refer :all]
-            [bdd.core :refer :all]))
+            [bdd.core :as bdd
+                      :refer :all :exclude [and not or]]))
 
 
 (deftest test-bdd-nodes-explicit
@@ -89,6 +90,25 @@
         (is (= (all-where false x) [{:a false :c true}
                                     {:a true :b false}]))
       )
+    )
+  )
+)
+
+(deftest test-operators
+  (testing "operators"
+    (with-new-bdd
+
+      (is (identical? (bdd/not (variable :a)) (not-variable :a)))
+
+      (is (identical? (bdd/and (variable :a) (variable :b))
+                      (@#'bdd/internal *bdd* :a
+                                       (f)
+                                       (@#'bdd/internal *bdd* :b (f) (t)))))
+
+      (is (identical? (bdd/or (variable :a) (variable :b))
+                      (@#'bdd/internal *bdd* :a
+                                       (@#'bdd/internal *bdd* :b (f) (t))
+                                       (t))))
     )
   )
 )

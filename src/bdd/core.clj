@@ -1,5 +1,6 @@
 (ns bdd.core
-  (:import [java.io Writer]))
+  (:import [java.io Writer])
+  (:refer-clojure :exclude [and not or]))
 
 
 ;;-----------------------------------------------------------------------------
@@ -58,7 +59,7 @@
 (defn- bdd-node
   ([bdd variable low high value]
    (let [k [variable low high value]]
-     (or
+     (clojure.core/or
        (@(.nodes bdd) k)
        (let [node (Node. variable low high value)]
          (swap! (.nodes bdd) assoc k node)
@@ -113,3 +114,56 @@
                      (all-where value (.low node)))
                 (map #(assoc % variable true)
                      (all-where value (.high node)))))))
+
+
+; We don't use recur in the body of these functions because we want recursive
+; calls to pick up memoized values.  We need the Y-combinator trick of passing
+; in the function itself as a parameter since you can't use the name of a let
+; binding recursively in its definition [1].
+;
+; [1] http://stackoverflow.com/a/12955191
+
+
+(defn- apply1
+  [bdd op lhs]
+  (let [internal-apply1
+        (memoize
+          (fn [recur' lhs]
+            (let [lhs-var (.variable lhs)]
+              (if (leaf-node? lhs)
+                (leaf bdd (op (.value lhs)))
+                (let [low (recur' recur' (.low lhs))
+                      high (recur' recur' (.high lhs))]
+                  (internal bdd lhs-var low high))))))]
+    (internal-apply1 internal-apply1 lhs)))
+
+(defn- apply2
+  [bdd op lhs rhs]
+  (let [internal-apply2
+        (memoize
+          (fn [recur' lhs rhs]
+            (case (compare lhs rhs)
+              0  (if (leaf-node? lhs)
+                   (leaf bdd (op (.value lhs) (.value rhs)))
+                   (let [low (recur' recur' (.low lhs) (.low rhs))
+                         high (recur' recur' (.high lhs) (.high rhs))]
+                     (internal bdd (.variable lhs) low high)))
+              -1 (let [low (recur' recur' (.low lhs) rhs)
+                       high (recur' recur' (.high lhs) rhs)]
+                   (internal bdd (.variable lhs) low high))
+              1  (let [low (recur' recur' lhs (.low rhs))
+                       high (recur' recur' lhs (.high rhs))]
+                   (internal bdd (.variable rhs) low high)))))]
+    (internal-apply2 internal-apply2 lhs rhs)))
+
+(defn not
+  ([lhs] (not *bdd* lhs))
+  ([bdd lhs] (apply1 bdd #(clojure.core/not %1) lhs)))
+
+(defn and
+  ([lhs rhs] (and *bdd* lhs rhs))
+  ([bdd lhs rhs] (apply2 bdd #(clojure.core/and %1 %2) lhs rhs)))
+
+(defn or
+  ([lhs rhs] (or *bdd* lhs rhs))
+  ([bdd lhs rhs] (apply2 bdd #(clojure.core/or %1 %2) lhs rhs)))
