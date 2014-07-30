@@ -38,10 +38,27 @@
 
 
 ;;-----------------------------------------------------------------------------
+;; Thread-local "current" BDD
+
+(def ^:dynamic *bdd* nil)
+
+(defmacro with-bdd [bdd & body] `(binding [*bdd* bdd] ~@body))
+(defmacro with-new-bdd [& body] `(binding [*bdd* (bdd)] ~@body))
+
+
+;;-----------------------------------------------------------------------------
 ;; Creating formulas
 
-(defn f [bdd] (leaf bdd false))
-(defn t [bdd] (leaf bdd true))
+(defn f
+  ([] (f *bdd*))
+  ([bdd] (leaf bdd false)))
+(defn t
+  ([] (t *bdd*))
+  ([bdd] (leaf bdd true)))
 
-(defn variable     [bdd variable] (internal bdd variable (f bdd) (t bdd)))
-(defn not-variable [bdd variable] (internal bdd variable (t bdd) (f bdd)))
+(defn variable
+  ([v] (variable *bdd* v))
+  ([bdd v] (internal bdd v (f bdd) (t bdd))))
+(defn not-variable
+  ([v] (not-variable *bdd* v))
+  ([bdd v] (internal bdd v (t bdd) (f bdd))))
