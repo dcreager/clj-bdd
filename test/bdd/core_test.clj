@@ -42,3 +42,22 @@
     )
   )
 )
+
+
+(deftest test-compare-nodes
+  (testing "comparing nodes"
+    (with-new-bdd
+      (is (compare (f) (f)) 0)
+      (is (compare (t) (t)) 0)
+      (is (compare (f) (t)) 0)
+      (is (compare (t) (f)) 0)
+
+      (is (compare (variable :a) (variable :b)) -1)
+      (is (compare (variable :a) (variable :a))  0)
+      (is (compare (variable :b) (variable :a))  1)
+
+      (is (compare (variable :a) (f)) -1)
+      (is (compare (f) (variable :a))  1)
+    )
+  )
+)

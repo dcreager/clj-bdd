@@ -8,12 +8,28 @@
 (def ^:private terminal-variable (Object.))
 
 (declare node-str)
+(declare compare-node)
 
 (defrecord Node [variable low high value]
   Object
-  (toString [node] (node-str node)))
+  (toString [node] (node-str node))
+  Comparable
+  (compareTo [node other] (compare-node node other)))
 
 (defn- leaf-node? [node] (identical? (.variable node) terminal-variable))
+
+; Leaves compare "larger" than any internal node so that they end up as actual
+; leaves of the tree.
+(defn- compare-node
+  [n1 n2]
+  (if (leaf-node? n1)
+    (if (leaf-node? n2)
+      0                                ; n1 and n2 are both leaves
+      1)                               ; n1 is a leaf, n2 is internal
+    (if (leaf-node? n2)
+      -1                               ; n1 is internal, n2 is a leaf
+      (compare (.variable n1)          ; n1 and n2 are both internal
+               (.variable n2)))))
 
 
 ;;-----------------------------------------------------------------------------
