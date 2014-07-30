@@ -1,4 +1,5 @@
-(ns bdd.core)
+(ns bdd.core
+  (:import [java.io Writer]))
 
 
 ;;-----------------------------------------------------------------------------
@@ -6,9 +7,29 @@
 
 (def ^:private terminal-variable (Object.))
 
-(defrecord Node [variable low high value])
+(declare node-str)
+
+(defrecord Node [variable low high value]
+  Object
+  (toString [node] (node-str node)))
 
 (defn- leaf-node? [node] (identical? (.variable node) terminal-variable))
+
+
+;;-----------------------------------------------------------------------------
+;; Rendering formulas
+
+(defn node-str
+  [node]
+  (if (leaf-node? node)
+    (str "<" (.value node) ">")
+    (str "(" (.variable node)
+         "? " (node-str (.high node))
+         ": " (node-str (.low node))
+         ")")))
+
+(defmethod print-method Node [node ^Writer writer]
+  (.write writer (node-str node)))
 
 
 ;;-----------------------------------------------------------------------------
